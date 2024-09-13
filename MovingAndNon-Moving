@@ -1,0 +1,91 @@
+import random
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import rc, gridspec
+
+class Person:
+    def __init__(self, N_PERSON, P_RATE):
+        self.N_PERSON = N_PERSON
+        self.P_RATE = P_RATE
+        self.p = [[1 for _ in range(int(self.P_RATE * self.N_PERSON))] + 
+                  [0 for _ in range(int((1 - self.P_RATE) * self.N_PERSON))] 
+                  for _ in range(2)]  # [0]: 1:うごく 0:自粛 [1]: 総移動距離or自粛している時間
+        for i in range(N_PERSON):
+            rnum = random.randint(0, 50)   #初期総移動距離をランダムに
+            self.p[1][i] = rnum
+        self.x = [random.randint(0, N_FIELD) for _ in range(self.N_PERSON)]
+        self.y = [random.randint(0, N_FIELD) for _ in range(self.N_PERSON)]
+
+    def p_func(self, k, n): #周期境界
+        if k < 0:
+            return k + n
+        elif k > n - 1:
+            return k - n
+        else:
+            return k
+
+    def my_field(self, xy, n, r=1): #周囲nマスに進む、デフォルトで1
+        rxy = random.randint(-r, r)
+        return self.p_func(xy + rxy, n)
+
+    def move_people(self, STEP, N_FIELD, MAX_STEP, RESTRAINT): #点の状態(色、座標、動くか止まるか)の設定、グラフ材料作成
+        ims = []
+
+        for i in range(STEP):
+            im = []
+            mv = 0  #動いている点の個数
+            colorlst = ["b" for _ in range(N_PERSON)]
+            newx = 0
+            newy = 0
+            step_data.append(i+1)
+            for j in range(self.N_PERSON):
+                if self.p[0][j] == 1:
+                    newx = self.my_field(self.x[j], N_FIELD)
+                    newy = self.my_field(self.y[j], N_FIELD)
+
+                    self.p[1][j] += abs(newx - self.x[j]) + abs(newy - self.y[j])
+                    if self.p[1][j] > MAX_STEP:
+                        self.p[1][j] = 0
+                        self.p[0][j] = 0
+                    self.x[j] = newx
+                    self.y[j] = newy
+
+                elif self.p[0][j] == 0:
+                    self.p[1][j] += 1
+                    colorlst[j] = "r"
+                    if self.p[1][j] > RESTRAINT:
+                        self.p[1][j] = 0
+                        self.p[0][j] = 1
+                        
+                if self.p[0][j] == 1:
+                    mv += 1
+                    
+            mv_data.append(mv)
+            im += [ax[0].scatter(self.x, self.y, color=colorlst, alpha = 0.5, s = 80)]
+            im += ax[1].plot(step_data, mv_data, color = "b")
+            ims.append(im)
+
+
+        return ims
+
+N_FIELD = 100  #n*nの二次元フィールド
+N_PERSON = 50  #点の数
+P_RATE = 0.7   #初期状態で点が動いている割合
+MAX_STEP = 30  #総移動距離の閾値
+RESTRAINT = 10 #自粛期間
+STEP = 100     #ステップ数
+mv_data = []   #動いている点の個数リスト
+step_data = [] #STEPを保存するリスト
+
+fig = plt.figure()
+gs = gridspec.GridSpec(10, 10)
+ax = [plt.subplot(gs[0:7, :6]), plt.subplot(gs[7:, :6])]
+ax[1].set_xlim(0, 100)
+
+person = Person(N_PERSON, P_RATE)
+ims = person.move_people(STEP, N_FIELD, MAX_STEP, RESTRAINT)
+plt.tight_layout()
+plt.close()
+ani = animation.ArtistAnimation(fig, ims, interval=200, repeat_delay=1000)
+rc('animation', html='jshtml')
+ani
